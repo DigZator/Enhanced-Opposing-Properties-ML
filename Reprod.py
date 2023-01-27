@@ -19,3 +19,29 @@ CPD_comp = npCPD[:,1:-2]
 print(CPD_comp)
 CPD_op = npCPD[:,-2:]
 print(CPD_op)
+
+fmv = np.zeros((69,2))
+print(fmv)
+
+split = 27
+
+for i in range(69):
+    # Calculating Mean
+    for j in range(7):
+        num = 0
+        for alloy in range(27):
+            num += (EFD_vals[i][j]*CPD_comp[alloy][j])
+        denom = np.sum(CPD_comp[:][j])
+        fmv[i][0] = num/denom
+    
+    # Calculating Variance
+    for j in range(7):
+        num = 0
+        for alloy in range(27):
+            num += (((EFD_vals[i][j] - fmv[i][0])**2) *CPD_comp[alloy][j])
+        denom = np.sum(CPD_comp[:][j])
+        fmv[i][1] = num/denom
+
+print(fmv)
+
+
