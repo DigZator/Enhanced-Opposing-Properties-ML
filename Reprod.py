@@ -96,7 +96,12 @@ plt.matshow(r)
 plt.colorbar()
 plt.show()
 
+Selects1 = list()
+
 for x in range(138):
     for y in range(x,138):
-        if r[x][y] > 0.95:
+        if abs(r[x][y]) > 0.95:
             print(x, y)
+            Selects1.append(x)
+
+print(set(Selects1))
