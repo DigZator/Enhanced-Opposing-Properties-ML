@@ -3,6 +3,9 @@ import pandas as pd
 import os
 import math
 import matplotlib.pyplot as plt
+from sklearn.svm import SVR
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 Path = os.getcwd()
 print(Path)
@@ -54,14 +57,14 @@ print(fmv)
 
 split = 22
 
-# train_set = npCPD[:split]
-# test_set  = npCPD[split:]
+train_set = npCPD[:split]
+test_set  = npCPD[split:]
 
-# train_comp = train_set[:,1:-2]
-# train_prop = train_set[:,-2:]
+train_comp = train_set[:,1:-2]
+train_prop = train_set[:,-2:]
 
-# test_comp = test_set[:,1:-2]
-# test_prop = test_set[:,-2:]
+test_comp = test_set[:,1:-2]
+test_prop = test_set[:,-2:]
 
 # lin_fmv = fmv.reshape((fmv.size,1))
 
@@ -94,8 +97,8 @@ for i in range(138):
 
 plt.matshow(r)
 plt.colorbar()
+# plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 plt.show()
-
 Selects1 = list()
 
 for x in range(138):
@@ -121,3 +124,9 @@ for keynum in set(Selects1):
     Selects1_lab.append(Prop_lab[keynum])
 
 print(Selects1_lab)
+
+# Train default model
+svrUTS = make_pipeline(StandardScaler(), SVR())
+svrUTS.fit(train_fmv, train_prop[:,0])
+print(svrUTS.predict(test_fmv))
+print(test_prop[:,0])
