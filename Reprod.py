@@ -105,3 +105,19 @@ for x in range(138):
             Selects1.append(x)
 
 print(set(Selects1))
+print(npEFD[:,0])
+Prop_lab = []
+for line in npEFD[:,0]:
+    code = line.split()[0]
+    # Prop_lab.append(code+'-M')
+    # Prop_lab.append(code+'-V')
+    Prop_lab.append('M-'+ code)
+    Prop_lab.append('V-'+ code)
+print(len(Prop_lab))
+
+Selects1_lab = []
+
+for keynum in set(Selects1):
+    Selects1_lab.append(Prop_lab[keynum])
+
+print(Selects1_lab)
