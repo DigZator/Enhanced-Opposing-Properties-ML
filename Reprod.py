@@ -7,23 +7,23 @@ from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-Path = os.getcwd()
+Path = os.getcwd() #Checking for path
 print(Path)
 
-EFD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Element_Features_Data.xlsx")
+EFD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Element_Features_Data.xlsx")#reading data set features
 print(EFD)
 print(type(EFD))
-npEFD = (EFD.to_numpy())
+npEFD = (EFD.to_numpy())#creating a numpy array
 
-EFD_vals = npEFD[:,1:]
+EFD_vals = npEFD[:,1:]#changing the shape of the array
 print(EFD_vals)
 
-CPD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Composition_Properties_Data.xlsx")
+CPD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Composition_Properties_Data.xlsx")#reading data set properties
 # print(EFD)
 print(type(CPD))
 npCPD = (CPD.to_numpy())
 
-np.random.shuffle(npCPD)
+np.random.shuffle(npCPD)#randomizing
 
 CPD_comp = npCPD[:,1:-2]
 print(CPD_comp)
