@@ -97,18 +97,20 @@ for i in range(138):
 
 plt.matshow(r)
 plt.colorbar()
-# plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
+# # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 plt.show()
 Selects1 = list()
+HCorr = list()
 
 for x in range(138):
     for y in range(x,138):
         if abs(r[x][y]) > 0.95:
             print(x, y)
             Selects1.append(x)
+            HCorr.append([x,y])
 
-print(set(Selects1))
-print(npEFD[:,0])
+# print(set(Selects1))
+# print(npEFD[:,0])
 Prop_lab = []
 for line in npEFD[:,0]:
     code = line.split()[0]
@@ -118,15 +120,64 @@ for line in npEFD[:,0]:
     Prop_lab.append('V-'+ code)
 print(len(Prop_lab))
 
-Selects1_lab = []
+# fig = plt.figure()
+# ax = fig.add_axes([0,0,138,138])
+# ax.plot(r)
+# ax.set_xlabel(Prop_lab)
 
-for keynum in set(Selects1):
-    Selects1_lab.append(Prop_lab[keynum])
+# ax.imshow(r)
 
-print(Selects1_lab)
+# fig, ax = plt.subplots()
+# im = ax.imshow(r)
+
+# # Show all ticks and label them with the respective list entries
+# ax.set_xticks(np.arange(len(Prop_lab)), labels=Prop_lab, size = 8)
+# ax.set_yticks(np.arange(len(Prop_lab)), labels=Prop_lab, size = 8)
+# # ax.grid(color = 'w', linewidth = 2, linestyle = ':')
+# plt.setp(ax.get_xticklabels(), rotation = 90, ha = 'right', rotation_mode = 'anchor')
+# fig.tight_layout()
+# # plt.savefig('CorrelationMatrix-20230210-0108.png', dpi = 3000)
+# plt.show()
+
+# Selects1_lab = []
+
+# for keynum in set(Selects1):
+#     Selects1_lab.append(Prop_lab[keynum])
+
+# print(Selects1_lab)
+# print(len(Selects1_lab))
+
+Unsel = [i for i in range(138) if i not in Selects1]
+print(Unsel)
+print(len(Unsel))
+
+Sel = list()
+end = False
+
+accountedfor = list()
+
+# for pair in HCorr:
+#     if pair[0] in accountedfor or pair[1] in accountedfor:
+#         pass
+#     else:
+#         accountedfor.append(pair[0])
+#         accountedfor.append(pair[1])
+#         Sel.append(pair[0])
+
+print(Sel)
+print(len(Sel))
 
 # Train default model
-svrUTS = make_pipeline(StandardScaler(), SVR())
-svrUTS.fit(train_fmv, train_prop[:,0])
-print(svrUTS.predict(test_fmv))
-print(test_prop[:,0])
+# svrUTS = make_pipeline(StandardScaler(), SVR())
+# svrUTS.fit(train_fmv, train_prop[:,0])
+# print(svrUTS.predict(test_fmv))
+# print(test_prop[:,0])
+
+# Sel = Unsel + Sel
+# print(Sel)
+# print(len(Sel))
+
+# for i, x in enumerate(Sel):
+#     for j, y in enumerate(Sel[i+1:]):
+#         if r[x][y] >= 0.95:
+#             print(r[x][y])
