@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import cross_val_score
 
 Path = os.getcwd()
 print(Path)
@@ -99,15 +100,34 @@ plt.matshow(r)
 plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 plt.show()
-Selects1 = list()
-HCorr = list()
+
+accountedfor = list()
+sel = list()
 
 for x in range(138):
+    if x in accountedfor:
+        continue
+    accountedfor.append(x)
     for y in range(x,138):
         if abs(r[x][y]) > 0.95:
-            print(x, y)
-            Selects1.append(x)
-            HCorr.append([x,y])
+            accountedfor.append(y)
+    sel.append(x)
+
+print(sel)
+print(len(sel))
+
+# for x in sel:
+#     for y in sel:
+#         if abs(r[x][y]) > 0.95:
+#             print(r[x,y])
+# print('hi')
+
+mat = r[:, sel]
+mat = mat[sel, :]
+
+plt.matshow(mat)
+plt.colorbar()
+plt.show()
 
 # print(set(Selects1))
 # print(npEFD[:,0])
@@ -139,45 +159,40 @@ print(len(Prop_lab))
 # # plt.savefig('CorrelationMatrix-20230210-0108.png', dpi = 3000)
 # plt.show()
 
-# Selects1_lab = []
+sel_lab = []
 
-# for keynum in set(Selects1):
-#     Selects1_lab.append(Prop_lab[keynum])
+for keynum in set(sel):
+    sel_lab.append(Prop_lab[keynum])
 
-# print(Selects1_lab)
-# print(len(Selects1_lab))
+print(sel_lab)
+print(len(sel_lab))
 
-Unsel = [i for i in range(138) if i not in Selects1]
-print(Unsel)
-print(len(Unsel))
+# Train Full model
+svrUTS = make_pipeline(StandardScaler(), SVR())
+svrUTS.fit(train_fmv, train_prop[:,0])
+print(svrUTS.predict(test_fmv))
+print(test_prop[:,0])
 
-Sel = list()
-end = False
+svrEC = make_pipeline(StandardScaler(), SVR())
+svrEC.fit(train_fmv, train_prop[:,1])
+print(svrEC.predict(test_fmv))
+print(test_prop[:,1])
 
-accountedfor = list()
+# Full Model Error
+FME_UTS_train = cross_val_score(estimator = svrUTS, X = train_fmv, y = train_prop[:, 0], cv = 10)
+FME_EC_train = cross_val_score(estimator = svrEC, X = train_fmv, y = train_prop[:, 1], cv = 10)
 
-# for pair in HCorr:
-#     if pair[0] in accountedfor or pair[1] in accountedfor:
-#         pass
-#     else:
-#         accountedfor.append(pair[0])
-#         accountedfor.append(pair[1])
-#         Sel.append(pair[0])
+UTS_train_scoravg = np.average(FME_UTS_train)
+EC_train_scoravg = np.average(FME_EC_train)
 
-print(Sel)
-print(len(Sel))
+FME_UTS_test = cross_val_score(estimator = svrUTS, X = test_fmv, y = test_prop[:, 0], cv = 2)
+FME_EC_test = cross_val_score(estimator = svrEC, X = test_fmv, y = test_prop[:, 1], cv = 2)
 
-# Train default model
-# svrUTS = make_pipeline(StandardScaler(), SVR())
-# svrUTS.fit(train_fmv, train_prop[:,0])
-# print(svrUTS.predict(test_fmv))
-# print(test_prop[:,0])
+UTS_test_scoravg = np.average(FME_UTS_test)
+EC_test_scoravg = np.average(FME_EC_test)
 
-# Sel = Unsel + Sel
-# print(Sel)
-# print(len(Sel))
+print("**********Full Model Error**********")
+print(f"svrUTS\nTrain - {UTS_train_scoravg}\nTest - {UTS_test_scoravg}")
+print(f"svrEC\nTrain - {EC_train_scoravg}\nTest - {EC_test_scoravg}")
+print("************************************")
 
-# for i, x in enumerate(Sel):
-#     for j, y in enumerate(Sel[i+1:]):
-#         if r[x][y] >= 0.95:
-#             print(r[x][y])
