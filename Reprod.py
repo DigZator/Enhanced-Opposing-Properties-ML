@@ -7,6 +7,7 @@ from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
+from sklearn import metrics
 
 Path = os.getcwd()
 print(Path)
@@ -170,29 +171,49 @@ print(len(sel_lab))
 # Train Full model
 svrUTS = make_pipeline(StandardScaler(), SVR())
 svrUTS.fit(train_fmv, train_prop[:,0])
-print(svrUTS.predict(test_fmv))
+test_op_UTS = svrUTS.predict(test_fmv)
+train_op_UTS = svrUTS.predict(train_fmv)
+print(test_op_UTS)
 print(test_prop[:,0])
 
 svrEC = make_pipeline(StandardScaler(), SVR())
 svrEC.fit(train_fmv, train_prop[:,1])
-print(svrEC.predict(test_fmv))
+test_op_EC = svrEC.predict(test_fmv)
+train_op_EC = svrEC.predict(train_fmv)
+print(test_op_EC)
 print(test_prop[:,1])
 
 # Full Model Error
-FME_UTS_train = cross_val_score(estimator = svrUTS, X = train_fmv, y = train_prop[:, 0], cv = 10)
-FME_EC_train = cross_val_score(estimator = svrEC, X = train_fmv, y = train_prop[:, 1], cv = 10)
+FME_UTS_train = cross_val_score(estimator = svrUTS, X = train_fmv, y = train_prop[:, 0], cv = 10, scoring = "neg_mean_absolute_percentage_error")
+FME_EC_train = cross_val_score(estimator = svrEC, X = train_fmv, y = train_prop[:, 1], cv = 10, scoring = "neg_mean_absolute_percentage_error")
 
 UTS_train_scoravg = np.average(FME_UTS_train)
 EC_train_scoravg = np.average(FME_EC_train)
 
-FME_UTS_test = cross_val_score(estimator = svrUTS, X = test_fmv, y = test_prop[:, 0], cv = 2)
-FME_EC_test = cross_val_score(estimator = svrEC, X = test_fmv, y = test_prop[:, 1], cv = 2)
+FME_UTS_test = cross_val_score(estimator = svrUTS, X = test_fmv, y = test_prop[:, 0], cv = 2, scoring = "neg_mean_absolute_percentage_error")
+FME_EC_test = cross_val_score(estimator = svrEC, X = test_fmv, y = test_prop[:, 1], cv = 2, scoring = "neg_mean_absolute_percentage_error")
 
 UTS_test_scoravg = np.average(FME_UTS_test)
 EC_test_scoravg = np.average(FME_EC_test)
 
+train_mae_UTS = metrics.mean_absolute_error(train_prop[:,0], train_op_UTS)
+train_mse_UTS = metrics.mean_squared_error(train_prop[:,0], train_op_UTS)
+train_r2_UTS = metrics.r2_score(train_prop[:,0], train_op_UTS)
+
+train_mae_EC = metrics.mean_absolute_error(train_prop[:,1], train_op_EC)
+train_mse_EC = metrics.mean_squared_error(train_prop[:,1], train_op_EC)
+train_r2_EC = metrics.r2_score(train_prop[:,1], train_op_EC)
+
+test_mae_UTS = metrics.mean_absolute_error(test_prop[:,0], test_op_UTS)
+test_mse_UTS = metrics.mean_squared_error(test_prop[:,0], test_op_UTS)
+test_r2_UTS = metrics.r2_score(test_prop[:,0], test_op_UTS)
+
+test_mae_EC = metrics.mean_absolute_error(test_prop[:,1], test_op_EC)
+test_mse_EC = metrics.mean_squared_error(test_prop[:,1], test_op_EC)
+test_r2_EC = metrics.r2_score(test_prop[:,1], test_op_EC)
+
 print("**********Full Model Error**********")
-print(f"svrUTS\nTrain - {UTS_train_scoravg}\nTest - {UTS_test_scoravg}")
-print(f"svrEC\nTrain - {EC_train_scoravg}\nTest - {EC_test_scoravg}")
+print(f"---svrUTS---\nTrain\nCV - {UTS_train_scoravg}\nMAE - {train_mae_UTS}\nMSE - {train_mse_UTS}\nR2 - {train_r2_UTS}\nTest\nCV  - {UTS_test_scoravg}\nMAE - {test_mae_UTS}\nMSE - {test_mse_UTS}\nR2 - {test_r2_UTS}")
+print(f"---svrUTS---\nTrain\nCV - {EC_train_scoravg}\nMAE - {train_mae_EC}\nMSE - {train_mse_EC}\nR2 - {train_r2_EC}\nTest\nCV  - {EC_test_scoravg}\nMAE - {test_mae_EC}\nMSE - {test_mse_EC}\nR2 - {test_r2_EC}")
 print("************************************")
 
