@@ -8,6 +8,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
+from sklearn.feature_selection import RFECV, RFE
 
 Path = os.getcwd()
 print(Path)
@@ -100,7 +101,7 @@ for i in range(138):
 plt.matshow(r)
 plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
-plt.show()
+# plt.show()
 
 accountedfor = list()
 sel = list()
@@ -117,18 +118,12 @@ for x in range(138):
 print(sel)
 print(len(sel))
 
-# for x in sel:
-#     for y in sel:
-#         if abs(r[x][y]) > 0.95:
-#             print(r[x,y])
-# print('hi')
-
 mat = r[:, sel]
 mat = mat[sel, :]
 
 plt.matshow(mat)
 plt.colorbar()
-plt.show()
+# plt.show()
 
 # print(set(Selects1))
 # print(npEFD[:,0])
@@ -214,6 +209,73 @@ test_r2_EC = metrics.r2_score(test_prop[:,1], test_op_EC)
 
 print("**********Full Model Error**********")
 print(f"---svrUTS---\nTrain\nCV - {UTS_train_scoravg}\nMAE - {train_mae_UTS}\nMSE - {train_mse_UTS}\nR2 - {train_r2_UTS}\nTest\nCV  - {UTS_test_scoravg}\nMAE - {test_mae_UTS}\nMSE - {test_mse_UTS}\nR2 - {test_r2_UTS}")
-print(f"---svrUTS---\nTrain\nCV - {EC_train_scoravg}\nMAE - {train_mae_EC}\nMSE - {train_mse_EC}\nR2 - {train_r2_EC}\nTest\nCV  - {EC_test_scoravg}\nMAE - {test_mae_EC}\nMSE - {test_mse_EC}\nR2 - {test_r2_EC}")
+print()
+print(f"---svrEC---\nTrain\nCV - {EC_train_scoravg}\nMAE - {train_mae_EC}\nMSE - {train_mse_EC}\nR2 - {train_r2_EC}\nTest\nCV  - {EC_test_scoravg}\nMAE - {test_mae_EC}\nMSE - {test_mse_EC}\nR2 - {test_r2_EC}")
 print("************************************")
 
+# print(type(sel))
+sel_alfeat = lin_fmv[:,sel]
+print(sel_alfeat.shape)
+
+train_sel_alfeat = sel_alfeat[:split, :]
+test_sel_alfeat = sel_alfeat[split:,:]
+
+non_corr_UTS = make_pipeline(StandardScaler(), SVR())
+non_corr_EC = make_pipeline(StandardScaler(), SVR())
+
+def printscore(model, x, y, printtrue = True):
+    MAPE = metrics.mean_absolute_percentage_error(y, model.predict(x))
+    MAE = metrics.mean_absolute_error(y, model.predict(x))
+    MSE = metrics.mean_squared_error(y, model.predict(x))
+    R2 = metrics.r2_score(y, model.predict(x))
+    if printtrue:
+        print(f"MAPE - {metrics.mean_absolute_percentage_error(y, model.predict(x))}")
+        print(f"MAE - {metrics.mean_absolute_error(y, model.predict(x))}")
+        print(f"MSE - {metrics.mean_squared_error(y, model.predict(x))}")
+        print(f"R2 - {metrics.r2_score(y, model.predict(x))}")
+
+    return MAPE, MAE, MSE, R2
+
+non_corr_UTS.fit(train_sel_alfeat, train_prop[:,0])
+non_corr_EC.fit(train_sel_alfeat, train_prop[:,1])
+
+# printscore(svrEC, train_fmv, train_prop[:,1])
+# print()
+# printscore(svrEC, test_fmv, test_prop[:,1])
+# print()
+NCEC, _, _, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
+# print()
+# printscore(non_corr_EC, test_sel_alfeat, test_prop[:, 1])
+
+NCUTS, _, _, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0])
+end = False
+UTS_RE = train_sel_alfeat.copy()
+UTS_RE_SEL = sel.copy()
+EC_RE = train_sel_alfeat.copy()
+
+print(UTS_RE_SEL)
+
+lrmker = NCUTS
+
+while not end:
+    erdictUTS = dict()
+    rmk = 0
+    rmker = np.infty
+    nfac = UTS_RE.shape[1]
+    for i in range(nfac):
+        temp_UTS =  make_pipeline(StandardScaler(), SVR())
+        temp_train_UTS = UTS_RE[:, [a for a in range(nfac) if i != a]]
+        temp_UTS.fit(temp_train_UTS, train_prop[:, 0])
+        erdictUTS[i] = printscore(temp_UTS, temp_train_UTS, train_prop[:, 0], printtrue = False)[0]
+        if erdictUTS[i] < rmker:
+            rmk = i
+            rmker = erdictUTS[i]
+    if lrmker < rmker:
+        end = True
+    else:
+        # print(erdictUTS)
+        print(rmk, rmker)
+        UTS_RE = UTS_RE[:, [a for a in range(nfac) if i != a]]
+        UTS_RE_SEL.pop(rmk)
+        print(UTS_RE_SEL)
+        lrmker = rmker
