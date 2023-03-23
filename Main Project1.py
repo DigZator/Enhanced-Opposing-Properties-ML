@@ -9,6 +9,9 @@ from sklearn.svm import SVR
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import mean_squared_error
+
 Path = os.getcwd() #Checking for path
 #print(Path)
 
@@ -32,13 +35,134 @@ CPD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Composition_Propertie
 #print(CPD)
 npCPD = (CPD.to_numpy())
 #print(npCPD)
-np.random.shuffle(npCPD)#randomizing i dontknow why
+np.random.shuffle(npCPD)#randomizing
 
+#slicing compostion
 CPD_comp = npCPD[:,1:-2]
-print(CPD_comp)
-
+#print(CPD_comp)
+#slicing properties
 CPD_op = npCPD[:,-2:]
-print(CPD_op)
+#print(CPD_op)
 
 fmv = np.zeros((27,69,2))
-print(fmv)
+#print(fmv)
+
+def get_al_factor(al_num, feat_num):
+    al = CPD_comp[al_num]
+    num = 0
+    denom = 0
+    for i, ele_comp in enumerate(al):
+        num += ele_comp * EFD_vals[feat_num][i]
+        denom += ele_comp
+    key_mean = num/denom
+
+    num = 0
+    for i, ele_comp in enumerate(al):
+        num += ele_comp * ((EFD_vals[feat_num][i] - key_mean)**2)
+    key_vari = num/denom
+    return key_mean, key_vari
+
+for al in range(27):
+    for feat in range(69):
+        fmv[al][feat][0], fmv[al][feat][1] = get_al_factor(al, feat)
+
+#print(fmv)
+
+split = 22
+
+train_set = npCPD[:split]
+test_set  = npCPD[split:]
+
+train_comp = train_set[:,1:-2]
+train_prop = train_set[:,-2:]
+
+test_comp = test_set[:,1:-2]
+test_prop = test_set[:,-2:]
+
+lin_fmv = fmv.reshape((27,138))
+
+
+
+
+train_fmv = lin_fmv[:split, :]
+test_fmv = lin_fmv[split:,:]
+
+avg_fmv = np.mean(train_fmv, axis = 0)
+
+#print(train_fmv.shape)
+#print(avg_fmv)
+
+r = np.zeros((138,138))
+
+for i in range(138):
+    # r[i][i] = 1
+    for j in range((i+1),138):
+        num = 0
+        denomi = 1e-9
+        denomj = 1e-9
+        for al in range(split):
+            num += (train_fmv[al][i] - avg_fmv[i]) * (train_fmv[al][j] - avg_fmv[j])
+            denomi += (train_fmv[al][i] - avg_fmv[i])**2
+            denomj += (train_fmv[al][j] - avg_fmv[j])**2
+        r[i][j] = num/(math.sqrt(denomi) * math.sqrt(denomj))
+        r[j][i] = r[i,j]
+
+plt.matshow(r)
+plt.colorbar()
+# plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
+#plt.show()
+
+Selects1 = list()
+
+for x in range(138):
+    for y in range(x,138):
+        if abs(r[x][y]) > 0.95:
+            #print(x, y)
+            Selects1.append(x)
+
+#print(set(Selects1))
+#print(npEFD[:,0])
+Prop_lab = []
+for line in npEFD[:,0]:
+    code = line.split()[0]
+    # Prop_lab.append(code+'-M')
+    # Prop_lab.append(code+'-V')
+    Prop_lab.append('M-'+ code)
+    Prop_lab.append('V-'+ code)
+#print(len(Prop_lab))
+
+Selects1_lab = []
+
+for keynum in set(Selects1):
+    Selects1_lab.append(Prop_lab[keynum])
+
+#print(Selects1_lab)
+
+# Train default model
+svrUTS = make_pipeline(StandardScaler(), SVR())
+svrUTS.fit(train_fmv, train_prop[:,0])
+print(svrUTS.predict(test_fmv))
+print(test_prop[:,0])
+
+# Create an SVR object
+svr = SVR()
+
+# Set up a parameter grid to search over
+param_grid = {
+    'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
+    'C': [0.1, 1, 10, 100],
+    'gamma': ['scale', 'auto'] + list(np.logspace(-3, 3, 7))
+}
+
+
+#GridSearchCV to find the best combination of hyperparameters
+grid_search = GridSearchCV(svr, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1)
+grid_search.fit(train_fmv, train_prop[:,0])
+
+# Print the best hyperparameters
+print("Best parameters: ", grid_search.best_params_)
+
+# Evaluate the best model on the testing set
+y_pred = grid_search.predict(train_fmv)
+mse = mean_squared_error(test_fmv, y_pred)
+print("MSE: ", mse)

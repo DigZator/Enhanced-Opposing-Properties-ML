@@ -26,10 +26,10 @@ npCPD = (CPD.to_numpy())
 np.random.shuffle(npCPD)#randomizing
 
 CPD_comp = npCPD[:,1:-2]
-print(CPD_comp)
+print(CPD_comp)#%ofelements
 
 CPD_op = npCPD[:,-2:]
-print(CPD_op)
+print(CPD_op)#property
 
 fmv = np.zeros((27,69,2))
 print(fmv)
