@@ -19,7 +19,7 @@ print(type(EFD))
 npEFD = (EFD.to_numpy())
 
 EFD_vals = npEFD[:,1:]
-print(EFD_vals)
+# print(EFD_vals)
 
 CPD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Composition_Properties_Data.xlsx")
 # print(EFD)
@@ -29,13 +29,13 @@ npCPD = (CPD.to_numpy())
 np.random.shuffle(npCPD)
 
 CPD_comp = npCPD[:,1:-2]
-print(CPD_comp)
+# print(CPD_comp)
 
 CPD_op = npCPD[:,-2:]
-print(CPD_op)
+# print(CPD_op)
 
 fmv = np.zeros((27,69,2))
-print(fmv)
+# print(fmv)
 
 def get_al_factor(al_num, feat_num):
     al = CPD_comp[al_num]
@@ -252,30 +252,22 @@ end = False
 UTS_RE = train_sel_alfeat.copy()
 UTS_RE_SEL = sel.copy()
 EC_RE = train_sel_alfeat.copy()
+EC_RE_SEL = sel.copy()
 
 print(UTS_RE_SEL)
 
 lrmker = NCUTS
 
-while not end:
-    erdictUTS = dict()
-    rmk = 0
-    rmker = np.infty
-    nfac = UTS_RE.shape[1]
-    for i in range(nfac):
-        temp_UTS =  make_pipeline(StandardScaler(), SVR())
-        temp_train_UTS = UTS_RE[:, [a for a in range(nfac) if i != a]]
-        temp_UTS.fit(temp_train_UTS, train_prop[:, 0])
-        erdictUTS[i] = printscore(temp_UTS, temp_train_UTS, train_prop[:, 0], printtrue = False)[0]
-        if erdictUTS[i] < rmker:
-            rmk = i
-            rmker = erdictUTS[i]
-    if lrmker < rmker:
-        end = True
-    else:
-        # print(erdictUTS)
-        print(rmk, rmker)
-        UTS_RE = UTS_RE[:, [a for a in range(nfac) if i != a]]
-        UTS_RE_SEL.pop(rmk)
-        print(UTS_RE_SEL)
-        lrmker = rmker
+estim = SVR(kernel = "linear")
+rfecvUTS = RFECV(estimator = estim, step = 1, cv =10)
+scaler = StandardScaler()
+train_sel_alfeat_scaled = scaler.fit_transform(train_sel_alfeat)
+rfecvUTS.fit(train_sel_alfeat_scaled, train_prop[:, 0])
+print(rfecvUTS.n_features_)
+print(rfecvUTS.ranking_)
+
+estim = SVR(kernel = "linear")
+rfecvEC = RFECV(estimator = estim, step = 1, cv =10)
+rfecvEC.fit(train_sel_alfeat_scaled, train_prop[:, 1])
+print(rfecvEC.n_features_)
+print(rfecvEC.ranking_)
