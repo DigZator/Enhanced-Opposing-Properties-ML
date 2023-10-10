@@ -13,30 +13,32 @@ from sklearn.feature_selection import RFECV, RFE
 Path = os.getcwd()
 print(Path)
 
-EFD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Element_Features_Data.xlsx")
-print(EFD)
-print(type(EFD))
+# Reading the Elemental property data
+EFD = pd.read_excel(Path+"\Element_Features_Data.xlsx")
+# print(EFD)
+# print(type(EFD))
 npEFD = (EFD.to_numpy())
 
 EFD_vals = npEFD[:,1:]
 # print(EFD_vals)
 
-CPD = pd.read_excel(Path+"\Enhanced-Opposing-Properties-ML\Composition_Properties_Data.xlsx")
+# Reading the composition and properties data
+CPD = pd.read_excel(Path+"\Composition_Properties_Data.xlsx")
 # print(EFD)
-print(type(CPD))
+# print(type(CPD))
 npCPD = (CPD.to_numpy())
 
+# Shuffling the Data
 np.random.shuffle(npCPD)
 
+# Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
-# print(CPD_comp)
-
 CPD_op = npCPD[:,-2:]
-# print(CPD_op)
 
+# Creating the Feature 
 fmv = np.zeros((27,69,2))
-# print(fmv)
 
+# Get Alloy Factors
 def get_al_factor(al_num, feat_num):
     al = CPD_comp[al_num]
     num = 0
@@ -52,14 +54,19 @@ def get_al_factor(al_num, feat_num):
     key_vari = num/denom
     return key_mean, key_vari
 
+# Calling alloy factors with all the alloys as the input
 for al in range(27):
     for feat in range(69):
         fmv[al][feat][0], fmv[al][feat][1] = get_al_factor(al, feat)
 
 print(fmv)
 
+# print(fmv.shape)
+# exit()
+
 split = 22
 
+#Split the data into train and test data
 train_set = npCPD[:split]
 test_set  = npCPD[split:]
 
@@ -69,22 +76,19 @@ train_prop = train_set[:,-2:]
 test_comp = test_set[:,1:-2]
 test_prop = test_set[:,-2:]
 
-# lin_fmv = fmv.reshape((fmv.size,1))
-
-# print(lin_fmv)
-
 lin_fmv = fmv.reshape((27,138))
 
 train_fmv = lin_fmv[:split, :]
 test_fmv = lin_fmv[split:,:]
 
+# Calculate the average alloy factors
 avg_fmv = np.mean(train_fmv, axis = 0)
 
 print(train_fmv.shape)
 print(avg_fmv)
 
+# Calculate the Pearson Correlation coefficient r
 r = np.zeros((138,138))
-
 for i in range(138):
     # r[i][i] = 1
     for j in range((i+1),138):
@@ -103,6 +107,7 @@ plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 # plt.show()
 
+# Performing Screening Correlation
 accountedfor = list()
 sel = list()
 
@@ -127,6 +132,8 @@ plt.colorbar()
 
 # print(set(Selects1))
 # print(npEFD[:,0])
+
+# Creating Property Labels
 Prop_lab = []
 for line in npEFD[:,0]:
     code = line.split()[0]
@@ -217,11 +224,17 @@ print("************************************")
 sel_alfeat = lin_fmv[:,sel]
 print(sel_alfeat.shape)
 
+
 train_sel_alfeat = sel_alfeat[:split, :]
 test_sel_alfeat = sel_alfeat[split:,:]
 
-non_corr_UTS = make_pipeline(StandardScaler(), SVR())
-non_corr_EC = make_pipeline(StandardScaler(), SVR())
+scaler = StandardScaler()
+scaler.fit(train_sel_alfeat)
+train_sel_alfeat = scaler.transform(train_sel_alfeat)
+test_sel_alfeat = scaler.transform(test_sel_alfeat)
+
+non_corr_UTS = SVR(kernel = 'rbf')
+non_corr_EC = SVR(kernel = 'rbf')
 
 def printscore(model, x, y, printtrue = True):
     MAPE = metrics.mean_absolute_percentage_error(y, model.predict(x))
@@ -239,15 +252,11 @@ def printscore(model, x, y, printtrue = True):
 non_corr_UTS.fit(train_sel_alfeat, train_prop[:,0])
 non_corr_EC.fit(train_sel_alfeat, train_prop[:,1])
 
-# printscore(svrEC, train_fmv, train_prop[:,1])
-# print()
-# printscore(svrEC, test_fmv, test_prop[:,1])
-# print()
-NCEC, _, _, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
-# print()
-# printscore(non_corr_EC, test_sel_alfeat, test_prop[:, 1])
-
+print("UTS")
 NCUTS, _, _, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0])
+print("EC")
+NCEC, _, _, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
+
 end = False
 UTS_RE = train_sel_alfeat.copy()
 UTS_RE_SEL = sel.copy()
@@ -256,18 +265,45 @@ EC_RE_SEL = sel.copy()
 
 print(UTS_RE_SEL)
 
-lrmker = NCUTS
+# lrmker = NCUTS
 
-estim = SVR(kernel = "linear")
-rfecvUTS = RFECV(estimator = estim, step = 1, cv =10)
-scaler = StandardScaler()
-train_sel_alfeat_scaled = scaler.fit_transform(train_sel_alfeat)
-rfecvUTS.fit(train_sel_alfeat_scaled, train_prop[:, 0])
-print(rfecvUTS.n_features_)
-print(rfecvUTS.ranking_)
+# estim = SVR(kernel = "linear")
+# rfecvUTS = RFECV(estimator = estim, step = 1, cv =10)
+# scaler = StandardScaler()
+# train_sel_alfeat_scaled = scaler.fit_transform(train_sel_alfeat)
+# rfecvUTS.fit(train_sel_alfeat_scaled, train_prop[:, 0])
+# print(rfecvUTS.n_features_)
+# # print(rfecvUTS.ranking_)
 
-estim = SVR(kernel = "linear")
-rfecvEC = RFECV(estimator = estim, step = 1, cv =10)
-rfecvEC.fit(train_sel_alfeat_scaled, train_prop[:, 1])
-print(rfecvEC.n_features_)
-print(rfecvEC.ranking_)
+# estim = SVR(kernel = "linear")
+# rfecvEC = RFECV(estimator = estim, step = 1, cv =10)
+# rfecvEC.fit(train_sel_alfeat_scaled, train_prop[:, 1])
+# print(rfecvEC.n_features_)
+# # print(rfecvEC.ranking_)
+
+# idxUTS = np.array(np.where(rfecvUTS.ranking_ == 1)[0])
+# print(idxUTS)
+# idxEC = np.array(np.where(rfecvEC.ranking_ == 1)[0])
+# print(idxEC)
+
+# UTS_RFE_SEL = [UTS_RE_SEL[i] for i in idxUTS]
+# EC_RFE_SEL = [EC_RE_SEL[i] for i in idxEC]
+
+# print(UTS_RFE_SEL)
+# print(EC_RFE_SEL)
+
+print(train_sel_alfeat.shape)
+
+best = np.infty
+
+# UTS RFE
+for i in range(train_sel_alfeat.shape[1]):
+    tdata = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != i]
+    # print(tdata.shape)
+    mod = SVR(kernel = "rbf")
+    mod.fit(tdata, train_prop[:, 0])
+    _, _, trerr, _ = printscore(mod, tdata, train_prop[:, 0], printtrue = False)
+    _, _, teerr, _ = printscore(mod, test_sel_alfeat[:, np.arange(test_sel_alfeat.shape[1]) != i], test_prop[:, 0], printtrue = False)
+    print(f"{i}\t{trerr}\t{teerr}")
+    best = teerr if best > teerr else best
+print(best)
