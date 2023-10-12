@@ -253,9 +253,9 @@ non_corr_UTS.fit(train_sel_alfeat, train_prop[:,0])
 non_corr_EC.fit(train_sel_alfeat, train_prop[:,1])
 
 print("UTS")
-NCUTS, _, _, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0])
+_ , _, NCUTS, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0])
 print("EC")
-NCEC, _, _, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
+_, _, NCEC, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
 
 end = False
 UTS_RE = train_sel_alfeat.copy()
@@ -293,17 +293,21 @@ print(UTS_RE_SEL)
 # print(EC_RFE_SEL)
 
 print(train_sel_alfeat.shape)
-
-best = np.infty
+cNCUTS = NCUTS
 
 # UTS RFE
-for i in range(train_sel_alfeat.shape[1]):
-    tdata = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != i]
-    # print(tdata.shape)
-    mod = SVR(kernel = "rbf")
-    mod.fit(tdata, train_prop[:, 0])
-    _, _, trerr, _ = printscore(mod, tdata, train_prop[:, 0], printtrue = False)
-    _, _, teerr, _ = printscore(mod, test_sel_alfeat[:, np.arange(test_sel_alfeat.shape[1]) != i], test_prop[:, 0], printtrue = False)
-    print(f"{i}\t{trerr}\t{teerr}")
-    best = teerr if best > teerr else best
-print(best)
+while cNCUTS < NCUTS:
+    for i in range(train_sel_alfeat.shape[1]):
+        tdata = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != i]
+        # print(tdata.shape)
+        mod = SVR(kernel = "rbf")
+        mod.fit(tdata, train_prop[:, 0])
+        _, _, trerr, _ = printscore(mod, tdata, train_prop[:, 0], printtrue = False)
+        _, _, teerr, _ = printscore(mod, test_sel_alfeat[:, np.arange(test_sel_alfeat.shape[1]) != i], test_prop[:, 0], printtrue = False)
+        print(f"{i}\t{trerr}\t{teerr}")
+        best = teerr if best > teerr else best
+        besti = i if best > teerr else besti
+    crerr = best
+    train_sel_alfeat = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != besti]
+    UTS_RE_SEL.pop(UST_RE_SEL.index(UTS_RE_SEL[besti]))
+    print(UTS_RE_SEL)
