@@ -29,7 +29,7 @@ CPD = pd.read_excel(Path+"\Composition_Properties_Data.xlsx")
 npCPD = (CPD.to_numpy())
 
 # Shuffling the Data
-np.random.shuffle(npCPD)
+# np.random.shuffle(npCPD)
 
 # Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
@@ -108,17 +108,32 @@ plt.colorbar()
 # plt.show()
 
 # Performing Screening Correlation
-accountedfor = list()
+# accountedfor = set()
+# sel = list()
+
+# for x in range(138):
+#     if x in accountedfor:
+#         continue
+#     accountedfor.add(x)
+#     for y in range(x,138):
+#         if abs(r[x][y]) > 0.95:
+#             accountedfor.add(y)
+#     sel.append(x)
+
+accountedfor = set()
 sel = list()
 
 for x in range(138):
     if x in accountedfor:
         continue
-    accountedfor.append(x)
-    for y in range(x,138):
+    accountedfor.add(x)
+    select_x = True  # Added a flag to keep track of x selection
+    for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
         if abs(r[x][y]) > 0.95:
-            accountedfor.append(y)
-    sel.append(x)
+            accountedfor.add(y)
+            select_x = False  # Set the flag to False when the condition is met
+    if select_x:
+        sel.append(x)
 
 print(sel)
 print(len(sel))
@@ -292,22 +307,88 @@ print(UTS_RE_SEL)
 # print(UTS_RFE_SEL)
 # print(EC_RFE_SEL)
 
-print(train_sel_alfeat.shape)
-cNCUTS = NCUTS
+# print(train_sel_alfeat.shape)
+# cNCUTS = NCUTS 
 
-# UTS RFE
-while cNCUTS < NCUTS:
-    for i in range(train_sel_alfeat.shape[1]):
-        tdata = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != i]
-        # print(tdata.shape)
-        mod = SVR(kernel = "rbf")
-        mod.fit(tdata, train_prop[:, 0])
-        _, _, trerr, _ = printscore(mod, tdata, train_prop[:, 0], printtrue = False)
-        _, _, teerr, _ = printscore(mod, test_sel_alfeat[:, np.arange(test_sel_alfeat.shape[1]) != i], test_prop[:, 0], printtrue = False)
-        print(f"{i}\t{trerr}\t{teerr}")
-        best = teerr if best > teerr else best
-        besti = i if best > teerr else besti
-    crerr = best
-    train_sel_alfeat = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != besti]
-    UTS_RE_SEL.pop(UST_RE_SEL.index(UTS_RE_SEL[besti]))
-    print(UTS_RE_SEL)
+# # UTS RFE
+# t = True
+# while (t):
+#     best = np.infty
+#     besti = 0
+#     for i in range(UTS_RE.shape[1]):
+#         tdata = UTS_RE[:, np.arange(UTS_RE.shape[1]) != i]
+#         # print(tdata.shape)
+#         mod = SVR(kernel = "rbf")
+#         mod.fit(tdata, train_prop[:, 0])
+#         _, _, trerr, _ = printscore(mod, tdata, train_prop[:, 0], printtrue = False)
+#         # _, _, teerr, _ = printscore(mod, test_sel_alfeat[:, [x for x in UTS_RE_SEL if x != i]], test_prop[:, 0], printtrue = False)
+#         print(f"{i}\t{trerr}\t{0}\t{besti}")
+#         besti = i if best > trerr else besti
+#         best = trerr if best > trerr else best
+
+#     if best < cNCUTS:
+#         train_sel_alfeat = train_sel_alfeat[:, np.arange(train_sel_alfeat.shape[1]) != besti]
+#         UTS_RE_SEL.pop(UTS_RE_SEL.index(UTS_RE_SEL[besti]))
+#         print(UTS_RE_SEL)
+#         cNCUTS = best
+#     else:
+#         t = False
+# print(UTS_RE_SEL)
+
+# UTS_sel_lab = []
+
+# for keynum in set(UTS_RE_SEL):
+#     UTS_sel_lab.append(Prop_lab[keynum])
+
+# print(UTS_sel_lab)
+
+# for afeat in UTS_RE_SEL:
+#     print(afeat, Prop_lab[afeat], end=" - \t")
+#     for bfeat in range(len(r)):
+#         if abs(r[afeat][bfeat]) > 0.95:
+#             print(bfeat, Prop_lab[bfeat], end=" ")
+#     print()
+
+score = {}
+# for n_sel in range(1, len(UTS_RE_SEL)):
+for n_sel in range(6, 7):
+    modsvr = SVR(kernel = "linear")
+    modrfe = RFE(estimator = modsvr, n_features_to_select = n_sel)
+    modrfe.fit(train_sel_alfeat, train_prop[:, 0])
+    print(n_sel)
+
+    print("Selected Features: ", modrfe.support_)
+
+    xtrain = modrfe.transform(train_sel_alfeat)
+    xtest = modrfe.transform(test_sel_alfeat)
+
+    modsvr.fit(xtrain, train_prop[:, 0])
+
+    # ytrain = modsvr.predict(xtrain)
+    # ytest = modsvr.predict(xtest)
+
+    print("Train Error")
+    _, mtra, _, _ = printscore(modsvr, xtrain, train_prop[:, 0])
+    print("Test Error")
+    _, mtes, _, _ = printscore(modsvr, xtest, test_prop[:, 0])
+
+    score[n_sel] = [mtra, mtes]
+    print()
+
+print(score)
+
+def find_keys_with_smallest_values(my_dict):
+    if not my_dict:
+        return []
+
+    max_first_value = min(my_dict.values(), key=lambda x: x[0])[0]
+    max_second_value = min(my_dict.values(), key=lambda x: x[1])[1]
+
+    largest_keys = [key for key, (value1, value2) in my_dict.items() if value1 == max_first_value or value2 == max_second_value]
+
+    return largest_keys
+
+print(find_keys_with_smallest_values(score))
+
+# for i in range(len(UTS_RE_SEL)):
+#     if 
