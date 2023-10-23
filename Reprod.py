@@ -34,6 +34,8 @@ npCPD = (CPD.to_numpy())
 # Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
 CPD_op = npCPD[:,-2:]
+# print(CPD_comp)
+# print(CPD_op)
 
 # Creating the Feature 
 fmv = np.zeros((27,69,2))
@@ -59,11 +61,6 @@ for al in range(27):
     for feat in range(69):
         fmv[al][feat][0], fmv[al][feat][1] = get_al_factor(al, feat)
 
-print(fmv)
-
-# print(fmv.shape)
-# exit()
-
 split = 22
 
 #Split the data into train and test data
@@ -77,15 +74,14 @@ test_comp = test_set[:,1:-2]
 test_prop = test_set[:,-2:]
 
 lin_fmv = fmv.reshape((27,138))
-
 train_fmv = lin_fmv[:split, :]
 test_fmv = lin_fmv[split:,:]
 
 # Calculate the average alloy factors
 avg_fmv = np.mean(train_fmv, axis = 0)
 
-print(train_fmv.shape)
-print(avg_fmv)
+# print(train_fmv.shape)
+# print(avg_fmv)
 
 # Calculate the Pearson Correlation coefficient r
 r = np.zeros((138,138))
@@ -156,8 +152,8 @@ for line in npEFD[:,0]:
     # Prop_lab.append(code+'-V')
     Prop_lab.append('M-'+ code)
     Prop_lab.append('V-'+ code)
-print(len(Prop_lab))
-
+# print(len(Prop_lab))
+# print(Prop_lab)
 # fig = plt.figure()
 # ax = fig.add_axes([0,0,138,138])
 # ax.plot(r)
@@ -179,26 +175,24 @@ print(len(Prop_lab))
 
 sel_lab = []
 
-for keynum in set(sel):
+for keynum in (sel):
     sel_lab.append(Prop_lab[keynum])
-
 print(sel_lab)
-print(len(sel_lab))
 
 # Train Full model
 svrUTS = make_pipeline(StandardScaler(), SVR())
 svrUTS.fit(train_fmv, train_prop[:,0])
 test_op_UTS = svrUTS.predict(test_fmv)
 train_op_UTS = svrUTS.predict(train_fmv)
-print(test_op_UTS)
-print(test_prop[:,0])
+# print(test_op_UTS)
+# print(test_prop[:,0])
 
 svrEC = make_pipeline(StandardScaler(), SVR())
 svrEC.fit(train_fmv, train_prop[:,1])
 test_op_EC = svrEC.predict(test_fmv)
 train_op_EC = svrEC.predict(train_fmv)
-print(test_op_EC)
-print(test_prop[:,1])
+# print(test_op_EC)
+# print(test_prop[:,1])
 
 # Full Model Error
 FME_UTS_train = cross_val_score(estimator = svrUTS, X = train_fmv, y = train_prop[:, 0], cv = 10, scoring = "neg_mean_absolute_percentage_error")
@@ -390,5 +384,10 @@ def find_keys_with_smallest_values(my_dict):
 
 print(find_keys_with_smallest_values(score))
 
-# for i in range(len(UTS_RE_SEL)):
-#     if 
+for i in range(len(UTS_RE_SEL)):
+    if modrfe.support_[i]:
+        print(UTS_RE_SEL[i], Prop_lab[UTS_RE_SEL[i]+1], end = "- ")
+        for j in range(138):
+            if abs(r[UTS_RE_SEL[i]][j]) > 0.95:
+                print(Prop_lab[j], end=" ")
+        print()
