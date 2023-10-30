@@ -9,6 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
 from sklearn.feature_selection import RFECV, RFE
+import itertools as it
 
 Path = os.getcwd()
 print(Path)
@@ -29,7 +30,7 @@ CPD = pd.read_excel(Path+"\Composition_Properties_Data.xlsx")
 npCPD = (CPD.to_numpy())
 
 # Shuffling the Data
-np.random.shuffle(npCPD)
+# np.random.shuffle(npCPD)
 
 # Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
@@ -101,7 +102,7 @@ for i in range(138):
 plt.matshow(r)
 plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
-# plt.show()
+plt.show()
 
 # Performing Screening Correlation
 accountedfor = set()
@@ -139,7 +140,7 @@ mat = mat[sel, :]
 
 plt.matshow(mat)
 plt.colorbar()
-# plt.show()
+plt.show()
 
 # print(set(Selects1))
 # print(npEFD[:,0])
@@ -297,8 +298,11 @@ for n_sel in range(1, len(UTS_RE_SEL)):
     print("Test Error")
     _, mtes, _, _ = printscore(modsvr, xtest, test_prop[:, 0])
 
-    UTSscore[n_sel] = [mtra, mtes, ]
+    UTSscore[n_sel] = [mtra, mtes]
     print()
+
+plt.scatter(UTSscore.keys(), [UTSscore[i][0] for i in UTSscore.keys()])
+plt.show()
 
 for i in UTSscore.keys():
     print(f"{i} : {UTSscore[i]}")
@@ -338,6 +342,9 @@ for n_sel in range(1, len(EC_RE_SEL)):
 
     ECscore[n_sel] = [mtra, mtes]
     print()
+
+plt.scatter(ECscore.keys(), [ECscore[i][0] for i in ECscore.keys()])
+plt.show()
 
 for i in ECscore.keys():
     print(f"{i} : {ECscore[i]}")
@@ -391,3 +398,71 @@ for i in range(len(ECrefsel)):
         if abs(r[ECrefsel[i]][j]) > 0.95:
             print(Prop_lab[j], end=" ")
     print()
+
+print(UTSrefsel)
+print(ECrefsel)
+
+UTScombs = []
+for r in range(1, len(UTSrefsel) + 1):
+    UTScombs.extend(it.combinations(UTSrefsel, r))
+
+ECcombs = []
+for r in range(1, len(ECrefsel) + 1):
+    ECcombs.extend(it.combinations(ECrefsel, r))
+
+UTStrain = UTSmodrfe.transform(train_sel_alfeat)
+ECtrain = ECmodrfe.transform(train_sel_alfeat)
+
+errdat = []
+xdat = []
+
+for i in range(len(UTScombs)):
+    xdat.append(len(UTScombs[i]))
+    take = [a in UTScombs[i] for a in (UTSrefsel)]
+    take = np.where(take)[0]
+    # print(take)
+    model = SVR(kernel = "linear")
+    model.fit(UTStrain[:, take], train_prop[:, 0])
+    _, err, _, _ = printscore(model, UTStrain[:, take], train_prop[:, 0], printtrue = False)
+    errdat.append(err)
+
+plt.scatter(xdat, errdat)
+plt.show()
+
+best_combUTS = UTScombs[np.argmin(errdat)]
+print(best_combUTS)
+
+errdat = []
+xdat = []
+
+for i in range(len(ECcombs)):
+    xdat.append(len(ECcombs[i]))
+    take = [a in ECcombs[i] for a in (ECrefsel)]
+    take = np.where(take)[0]
+    # print(take)
+    model = SVR(kernel = "linear")
+    model.fit(ECtrain[:, take], train_prop[:, 1])
+    _, err, _, _ = printscore(model, ECtrain[:, take], train_prop[:, 1], printtrue = False)
+    errdat.append(err)
+
+plt.scatter(xdat, errdat)
+plt.show()
+
+best_combEC = ECcombs[np.argmin(errdat)]
+print(best_combEC)
+
+finUTS = SVR(kernel = "linear")
+finUTSTrain = UTSmodrfe.transform(train_sel_alfeat)
+take = [a in best_combUTS for a in (UTSrefsel)]
+take = np.where(take)[0]
+finUTS.fit(finUTSTrain[:, take], train_prop[:, 0])
+finUTSTest = UTSmodrfe.transform(test_sel_alfeat)
+printscore(finUTS, finUTSTest[:, take], test_prop[:, 0])
+
+finEC = SVR(kernel = "linear")
+finECTrain = ECmodrfe.transform(train_sel_alfeat)
+take = [a in best_combEC for a in (ECrefsel)]
+take = np.where(take)[0]
+finEC.fit(finECTrain[:, take], train_prop[:, 1])
+finECTest = ECmodrfe.transform(test_sel_alfeat)
+printscore(finEC, finECTest[:, take], test_prop[:, 1])
