@@ -30,7 +30,7 @@ CPD = pd.read_excel(Path+"\Composition_Properties_Data.xlsx")
 npCPD = (CPD.to_numpy())
 
 # Shuffling the Data
-# np.random.shuffle(npCPD)
+np.random.shuffle(npCPD)
 
 # Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
@@ -105,18 +105,6 @@ plt.colorbar()
 plt.show()
 
 # Performing Screening Correlation
-accountedfor = set()
-sel = list()
-
-for x in range(138):
-    if x in accountedfor:
-        continue
-    accountedfor.add(x)
-    for y in range(x,138):
-        if abs(r[x][y]) > 0.95:
-            accountedfor.add(y)
-    sel.append(x)
-
 # accountedfor = set()
 # sel = list()
 
@@ -124,13 +112,25 @@ for x in range(138):
 #     if x in accountedfor:
 #         continue
 #     accountedfor.add(x)
-#     select_x = True  # Added a flag to keep track of x selection
-#     for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+#     for y in range(x,138):
 #         if abs(r[x][y]) > 0.95:
 #             accountedfor.add(y)
-#             select_x = False  # Set the flag to False when the condition is met
-#     if select_x:
-#         sel.append(x)
+#     sel.append(x)
+
+accountedfor = set()
+sel = list()
+
+for x in range(138):
+    if x in accountedfor:
+        continue
+    accountedfor.add(x)
+    select_x = True  # Added a flag to keep track of x selection
+    for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+        if abs(r[x][y]) > 0.95:
+            accountedfor.add(y)
+            select_x = False  # Set the flag to False when the condition is met
+    if select_x:
+        sel.append(x)
 
 print(sel)
 print(len(sel))
@@ -453,16 +453,36 @@ print(best_combEC)
 
 finUTS = SVR(kernel = "linear")
 finUTSTrain = UTSmodrfe.transform(train_sel_alfeat)
-take = [a in best_combUTS for a in (UTSrefsel)]
-take = np.where(take)[0]
-finUTS.fit(finUTSTrain[:, take], train_prop[:, 0])
+UTStake = [a in best_combUTS for a in (UTSrefsel)]
+UTStake = np.where(UTStake)[0]
+finUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
 finUTSTest = UTSmodrfe.transform(test_sel_alfeat)
-printscore(finUTS, finUTSTest[:, take], test_prop[:, 0])
+print("\n")
+printscore(finUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+printscore(finUTS, finUTSTest[:, UTStake], test_prop[:, 0])
+
+plt.scatter(finUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
+plt.scatter(finUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([200,500], [200,500])
+plt.xlabel("Predicted UTS (MPa)")
+plt.ylabel("Experimental UTS (MPa)")
+plt.show()
 
 finEC = SVR(kernel = "linear")
 finECTrain = ECmodrfe.transform(train_sel_alfeat)
-take = [a in best_combEC for a in (ECrefsel)]
-take = np.where(take)[0]
-finEC.fit(finECTrain[:, take], train_prop[:, 1])
+ECtake = [a in best_combEC for a in (ECrefsel)]
+ECtake = np.where(ECtake)[0]
+finEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
 finECTest = ECmodrfe.transform(test_sel_alfeat)
-printscore(finEC, finECTest[:, take], test_prop[:, 1])
+print("\n\n")
+printscore(finEC, finECTrain[:, ECtake], train_prop[:, 1])
+printscore(finEC, finECTest[:, ECtake], test_prop[:, 1])
+
+plt.scatter(finEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
+plt.scatter(finEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([0,100], [0,100])
+plt.xlabel("Predicted EC (%IACS)")
+plt.ylabel("Experimental EC (%IACS)")
+plt.show()
