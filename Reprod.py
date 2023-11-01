@@ -1,15 +1,4 @@
-import numpy as np
-import pandas as pd
-import os
-import math
-import matplotlib.pyplot as plt
-from sklearn.svm import SVR
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score
-from sklearn import metrics
-from sklearn.feature_selection import RFECV, RFE
-import itertools as it
+from init import *
 
 Path = os.getcwd()
 print(Path)
@@ -105,18 +94,6 @@ plt.colorbar()
 plt.show()
 
 # Performing Screening Correlation
-# accountedfor = set()
-# sel = list()
-
-# for x in range(138):
-#     if x in accountedfor:
-#         continue
-#     accountedfor.add(x)
-#     for y in range(x,138):
-#         if abs(r[x][y]) > 0.95:
-#             accountedfor.add(y)
-#     sel.append(x)
-
 accountedfor = set()
 sel = list()
 
@@ -124,13 +101,25 @@ for x in range(138):
     if x in accountedfor:
         continue
     accountedfor.add(x)
-    select_x = True  # Added a flag to keep track of x selection
-    for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+    for y in range(x,138):
         if abs(r[x][y]) > 0.95:
             accountedfor.add(y)
-            select_x = False  # Set the flag to False when the condition is met
-    if select_x:
-        sel.append(x)
+    sel.append(x)
+
+# accountedfor = set()
+# sel = list()
+
+# for x in range(138):
+#     if x in accountedfor:
+#         continue
+#     accountedfor.add(x)
+#     select_x = True  # Added a flag to keep track of x selection
+#     for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+#         if abs(r[x][y]) > 0.95:
+#             accountedfor.add(y)
+#             select_x = False  # Set the flag to False when the condition is met
+#     if select_x:
+#         sel.append(x)
 
 print(sel)
 print(len(sel))
@@ -302,6 +291,9 @@ for n_sel in range(1, len(UTS_RE_SEL)):
     print()
 
 plt.scatter(UTSscore.keys(), [UTSscore[i][0] for i in UTSscore.keys()])
+plt.xlabel("Variation of Alloy Factor Number during Elimination")
+plt.ylabel("Mean Absolute Error")
+plt.title("Recurrsive Feature Elimination for UTS")
 plt.show()
 
 for i in UTSscore.keys():
@@ -344,6 +336,9 @@ for n_sel in range(1, len(EC_RE_SEL)):
     print()
 
 plt.scatter(ECscore.keys(), [ECscore[i][0] for i in ECscore.keys()])
+plt.xlabel("Variation of Alloy Factor Number during Elimination")
+plt.ylabel("Mean Absolute Error")
+plt.title("Recurrsive Feature Elimination for EC")
 plt.show()
 
 for i in ECscore.keys():
@@ -427,6 +422,9 @@ for i in range(len(UTScombs)):
     errdat.append(err)
 
 plt.scatter(xdat, errdat)
+plt.xlabel("Variation of Alloy Factor Number during Screening")
+plt.ylabel("Mean Absolute Error")
+plt.title("Exhaustive Screening for UTS")
 plt.show()
 
 best_combUTS = UTScombs[np.argmin(errdat)]
@@ -446,43 +444,123 @@ for i in range(len(ECcombs)):
     errdat.append(err)
 
 plt.scatter(xdat, errdat)
+plt.xlabel("Variation of Alloy Factor Number during Exhaustive Screening")
+plt.ylabel("Mean Absolute Error")
+plt.title("Exhaustive Screening for EC")
 plt.show()
 
 best_combEC = ECcombs[np.argmin(errdat)]
 print(best_combEC)
 
+print("\nSVR\n***UTS***")
 finUTS = SVR(kernel = "linear")
 finUTSTrain = UTSmodrfe.transform(train_sel_alfeat)
 UTStake = [a in best_combUTS for a in (UTSrefsel)]
 UTStake = np.where(UTStake)[0]
 finUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
 finUTSTest = UTSmodrfe.transform(test_sel_alfeat)
-print("\n")
+print("Training Score")
 printscore(finUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+print("\nTesting Score")
 printscore(finUTS, finUTSTest[:, UTStake], test_prop[:, 0])
 
 plt.scatter(finUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
 plt.scatter(finUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
 plt.legend()
-plt.plot([200,500], [200,500])
+plt.plot([200,500], [200,500], color = "gray")
 plt.xlabel("Predicted UTS (MPa)")
 plt.ylabel("Experimental UTS (MPa)")
+plt.title("The performance of the final UTS model using SVR")
 plt.show()
 
+print("***EC***")
 finEC = SVR(kernel = "linear")
 finECTrain = ECmodrfe.transform(train_sel_alfeat)
 ECtake = [a in best_combEC for a in (ECrefsel)]
 ECtake = np.where(ECtake)[0]
 finEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
 finECTest = ECmodrfe.transform(test_sel_alfeat)
-print("\n\n")
+print("Training Score")
 printscore(finEC, finECTrain[:, ECtake], train_prop[:, 1])
+print("\nTesting Score")
 printscore(finEC, finECTest[:, ECtake], test_prop[:, 1])
+print("*************\n")
 
 plt.scatter(finEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
 plt.scatter(finEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
 plt.legend()
-plt.plot([0,100], [0,100])
+plt.plot([0,100], [0,100], color = "gray")
 plt.xlabel("Predicted EC (%IACS)")
 plt.ylabel("Experimental EC (%IACS)")
+plt.title("The performance of the final EC model using SVR")
+plt.show()
+
+print("Bootstrap Aggregating\n***UTS***")
+basebagUTS = DecisionTreeRegressor()
+BAGUTS = BaggingRegressor(basebagUTS, n_estimators = 100)
+BAGUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
+print("Training Score")
+printscore(BAGUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+print("\nTesting Score")
+printscore(BAGUTS, finUTSTest[:, UTStake], test_prop[:, 0])
+print("***EC***")
+basebagEC = DecisionTreeRegressor()
+BAGEC = BaggingRegressor(basebagEC, n_estimators = 100)
+BAGEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
+print("Training Score")
+printscore(BAGEC, finECTrain[:, ECtake], train_prop[:, 1])
+print("\nTesting Score")
+printscore(BAGEC, finECTest[:, ECtake], test_prop[:, 1])
+print("*************\n")
+
+plt.scatter(BAGUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
+plt.scatter(BAGUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([200,500], [200,500], color = "gray")
+plt.xlabel("Predicted UTS (MPa)")
+plt.ylabel("Experimental UTS (MPa)")
+plt.title("The performance of the final UTS model using Bagging Regressor")
+plt.show()
+
+plt.scatter(BAGEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
+plt.scatter(BAGEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([0,100], [0,100], color = "gray")
+plt.xlabel("Predicted EC (%IACS)")
+plt.ylabel("Experimental EC (%IACS)")
+plt.title("The performance of the final EC model using Bagging Regressor")
+plt.show()
+
+print("Random Forest\n***UTS***")
+RFUTS = RandomForestRegressor(n_estimators = 100)
+RFUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
+print("Training Score")
+printscore(RFUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+print("\nTesting Score")
+printscore(RFUTS, finUTSTest[:, UTStake], test_prop[:, 0])
+print("***EC***")
+RFEC = RandomForestRegressor(n_estimators = 100)
+RFEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
+print("Training Score")
+printscore(RFEC, finECTrain[:, ECtake], train_prop[:, 1])
+print("\nTesting Score")
+printscore(RFEC, finECTest[:, ECtake], test_prop[:, 1])
+print("*************\n")
+
+plt.scatter(RFUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
+plt.scatter(RFUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([200,500], [200,500], color = "gray")
+plt.xlabel("Predicted UTS (MPa)")
+plt.ylabel("Experimental UTS (MPa)")
+plt.title("The performance of the final UTS model using Random Forest")
+plt.show()
+
+plt.scatter(RFEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
+plt.scatter(RFEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
+plt.legend()
+plt.plot([0,100], [0,100], color = "gray")
+plt.xlabel("Predicted EC (%IACS)")
+plt.ylabel("Experimental EC (%IACS)")
+plt.title("The performance of the final EC model using Random Forest")
 plt.show()
