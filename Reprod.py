@@ -19,7 +19,7 @@ CPD = pd.read_excel(Path+"\Composition_Properties_Data.xlsx")
 npCPD = (CPD.to_numpy())
 
 # Shuffling the Data
-np.random.shuffle(npCPD)
+# np.random.shuffle(npCPD)
 
 # Separating the composition and properties into differnt arrays
 CPD_comp = npCPD[:,1:-2]
@@ -88,7 +88,7 @@ for i in range(138):
         r[i][j] = num/(math.sqrt(denomi) * math.sqrt(denomj))
         r[j][i] = r[i,j]
 
-plt.matshow(r)
+plt.matshow(r[:30,:30])
 plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 plt.show()
@@ -252,9 +252,9 @@ non_corr_UTS.fit(train_sel_alfeat, train_prop[:,0])
 non_corr_EC.fit(train_sel_alfeat, train_prop[:,1])
 
 print("UTS")
-_ , _, NCUTS, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0])
+_ , _, NCUTS, _ = printscore(non_corr_UTS, train_sel_alfeat, train_prop[:, 0], printtrue = False)
 print("EC")
-_, _, NCEC, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1])
+_, _, NCEC, _ = printscore(non_corr_EC, train_sel_alfeat, train_prop[:, 1], printtrue = False)
 
 end = False
 UTS_RE = train_sel_alfeat.copy()
@@ -267,12 +267,12 @@ print(UTS_RE_SEL)
 UTSscore = {}
 for n_sel in range(1, len(UTS_RE_SEL)):
 # for n_sel in range(6, 7):
-    modsvr = SVR(kernel = "linear")
+    modsvr = SVR(kernel = "linear", C = 13, gamma = 0.0085)
     modrfe = RFE(estimator = modsvr, n_features_to_select = n_sel)
     modrfe.fit(train_sel_alfeat, train_prop[:, 0])
-    print(n_sel)
+    # print(n_sel)
 
-    print("Selected Features: ", modrfe.support_)
+    # print("Selected Features: ", modrfe.support_)
 
     xtrain = modrfe.transform(train_sel_alfeat)
     xtest = modrfe.transform(test_sel_alfeat)
@@ -282,19 +282,13 @@ for n_sel in range(1, len(UTS_RE_SEL)):
     # ytrain = modsvr.predict(xtrain)
     # ytest = modsvr.predict(xtest)
 
-    print("Train Error")
-    _, mtra, _, _ = printscore(modsvr, xtrain, train_prop[:, 0])
-    print("Test Error")
-    _, mtes, _, _ = printscore(modsvr, xtest, test_prop[:, 0])
+    # print("Train Error")
+    _, mtra, _, _ = printscore(modsvr, xtrain, train_prop[:, 0], printtrue = False)
+    # print("Test Error")
+    _, mtes, _, _ = printscore(modsvr, xtest, test_prop[:, 0], printtrue = False)
 
     UTSscore[n_sel] = [mtra, mtes]
-    print()
-
-plt.scatter(UTSscore.keys(), [UTSscore[i][0] for i in UTSscore.keys()])
-plt.xlabel("Variation of Alloy Factor Number during Elimination")
-plt.ylabel("Mean Absolute Error")
-plt.title("Recurrsive Feature Elimination for UTS")
-plt.show()
+    # print()
 
 for i in UTSscore.keys():
     print(f"{i} : {UTSscore[i]}")
@@ -309,15 +303,22 @@ def smallest_value(input_dict):
 UTS_nsel = smallest_value(UTSscore)[0]
 print(UTS_nsel)
 
+plt.plot(UTSscore.keys(), [UTSscore[i][0] for i in UTSscore.keys()], linestyle = "dashed", linewidth = 1, color = "gray", label = "line", zorder = 0)
+plt.scatter(UTSscore.keys(), [UTSscore[i][0] for i in UTSscore.keys()], marker = "o", color = "blue", label = "points", zorder = 1)
+plt.xlabel("Variation of Alloy Factor Number during Elimination")
+plt.ylabel("Mean Absolute Error")
+plt.title("Recurrsive Feature Elimination for UTS")
+plt.show()
+
 ECscore = {}
 for n_sel in range(1, len(EC_RE_SEL)):
 # for n_sel in range(7, 8):
-    modsvr = SVR(kernel = "linear")
+    modsvr = SVR(kernel = "linear", C = 700, gamma = 0.0011)
     modrfe = RFE(estimator = modsvr, n_features_to_select = n_sel)
     modrfe.fit(train_sel_alfeat, train_prop[:, 1])
-    print(n_sel)
+    # print(n_sel)
 
-    print("Selected Features: ", modrfe.support_)
+    # print("Selected Features: ", modrfe.support_)
 
     xtrain = modrfe.transform(train_sel_alfeat)
     xtest = modrfe.transform(test_sel_alfeat)
@@ -327,25 +328,27 @@ for n_sel in range(1, len(EC_RE_SEL)):
     # ytrain = modsvr.predict(xtrain)
     # ytest = modsvr.predict(xtest)
 
-    print("Train Error")
+    # print("Train Error")
     _, mtra, _, _ = printscore(modsvr, xtrain, train_prop[:, 1])
-    print("Test Error")
+    # print("Test Error")
     _, mtes, _, _ = printscore(modsvr, xtest, test_prop[:, 1])
 
     ECscore[n_sel] = [mtra, mtes]
-    print()
+    # print()
 
-plt.scatter(ECscore.keys(), [ECscore[i][0] for i in ECscore.keys()])
-plt.xlabel("Variation of Alloy Factor Number during Elimination")
-plt.ylabel("Mean Absolute Error")
-plt.title("Recurrsive Feature Elimination for EC")
-plt.show()
 
 for i in ECscore.keys():
     print(f"{i} : {ECscore[i]}")
 
 EC_nsel = smallest_value(ECscore)[0]
 print(EC_nsel)
+
+plt.plot(ECscore.keys(), [ECscore[i][0] for i in ECscore.keys()], linestyle = "dashed", linewidth = 1, color = "gray", label = "line", zorder = 0)
+plt.scatter(ECscore.keys(), [ECscore[i][0] for i in ECscore.keys()], marker = "o", color = "blue", label = "points", zorder = 1)
+plt.xlabel("Variation of Alloy Factor Number during Elimination")
+plt.ylabel("Mean Absolute Error")
+plt.title("Recurrsive Feature Elimination for EC")
+plt.show()
 
 UTSmod = SVR(kernel = "linear")
 UTSmodrfe = RFE(estimator = UTSmod, n_features_to_select = UTS_nsel)
@@ -416,7 +419,7 @@ for i in range(len(UTScombs)):
     take = [a in UTScombs[i] for a in (UTSrefsel)]
     take = np.where(take)[0]
     # print(take)
-    model = SVR(kernel = "linear")
+    model = SVR(kernel = "linear", C = 13, gamma = 0.0085)
     model.fit(UTStrain[:, take], train_prop[:, 0])
     _, err, _, _ = printscore(model, UTStrain[:, take], train_prop[:, 0], printtrue = False)
     errdat.append(err)
@@ -438,7 +441,7 @@ for i in range(len(ECcombs)):
     take = [a in ECcombs[i] for a in (ECrefsel)]
     take = np.where(take)[0]
     # print(take)
-    model = SVR(kernel = "linear")
+    model = SVR(kernel = "linear", C = 700, gamma = 0.0011)
     model.fit(ECtrain[:, take], train_prop[:, 1])
     _, err, _, _ = printscore(model, ECtrain[:, take], train_prop[:, 1], printtrue = False)
     errdat.append(err)
@@ -453,7 +456,7 @@ best_combEC = ECcombs[np.argmin(errdat)]
 print(best_combEC)
 
 print("\nSVR\n***UTS***")
-finUTS = SVR(kernel = "linear")
+finUTS = SVR(kernel = "linear", C = 13, gamma = 0.0085)
 finUTSTrain = UTSmodrfe.transform(train_sel_alfeat)
 UTStake = [a in best_combUTS for a in (UTSrefsel)]
 UTStake = np.where(UTStake)[0]
@@ -474,7 +477,7 @@ plt.title("The performance of the final UTS model using SVR")
 plt.show()
 
 print("***EC***")
-finEC = SVR(kernel = "linear")
+finEC = SVR(kernel = "linear", C = 700, gamma = 0.0011)
 finECTrain = ECmodrfe.transform(train_sel_alfeat)
 ECtake = [a in best_combEC for a in (ECrefsel)]
 ECtake = np.where(ECtake)[0]
@@ -495,72 +498,72 @@ plt.ylabel("Experimental EC (%IACS)")
 plt.title("The performance of the final EC model using SVR")
 plt.show()
 
-print("Bootstrap Aggregating\n***UTS***")
-basebagUTS = DecisionTreeRegressor()
-BAGUTS = BaggingRegressor(basebagUTS, n_estimators = 100)
-BAGUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
-print("Training Score")
-printscore(BAGUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
-print("\nTesting Score")
-printscore(BAGUTS, finUTSTest[:, UTStake], test_prop[:, 0])
-print("***EC***")
-basebagEC = DecisionTreeRegressor()
-BAGEC = BaggingRegressor(basebagEC, n_estimators = 100)
-BAGEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
-print("Training Score")
-printscore(BAGEC, finECTrain[:, ECtake], train_prop[:, 1])
-print("\nTesting Score")
-printscore(BAGEC, finECTest[:, ECtake], test_prop[:, 1])
-print("*************\n")
+# print("Bootstrap Aggregating\n***UTS***")
+# basebagUTS = DecisionTreeRegressor()
+# BAGUTS = BaggingRegressor(basebagUTS, n_estimators = 100)
+# BAGUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
+# print("Training Score")
+# printscore(BAGUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+# print("\nTesting Score")
+# printscore(BAGUTS, finUTSTest[:, UTStake], test_prop[:, 0])
+# print("***EC***")
+# basebagEC = DecisionTreeRegressor()
+# BAGEC = BaggingRegressor(basebagEC, n_estimators = 100)
+# BAGEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
+# print("Training Score")
+# printscore(BAGEC, finECTrain[:, ECtake], train_prop[:, 1])
+# print("\nTesting Score")
+# printscore(BAGEC, finECTest[:, ECtake], test_prop[:, 1])
+# print("*************\n")
 
-plt.scatter(BAGUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
-plt.scatter(BAGUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
-plt.legend()
-plt.plot([200,500], [200,500], color = "gray")
-plt.xlabel("Predicted UTS (MPa)")
-plt.ylabel("Experimental UTS (MPa)")
-plt.title("The performance of the final UTS model using Bagging Regressor")
-plt.show()
+# plt.scatter(BAGUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
+# plt.scatter(BAGUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
+# plt.legend()
+# plt.plot([200,500], [200,500], color = "gray")
+# plt.xlabel("Predicted UTS (MPa)")
+# plt.ylabel("Experimental UTS (MPa)")
+# plt.title("The performance of the final UTS model using Bagging Regressor")
+# plt.show()
 
-plt.scatter(BAGEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
-plt.scatter(BAGEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
-plt.legend()
-plt.plot([0,100], [0,100], color = "gray")
-plt.xlabel("Predicted EC (%IACS)")
-plt.ylabel("Experimental EC (%IACS)")
-plt.title("The performance of the final EC model using Bagging Regressor")
-plt.show()
+# plt.scatter(BAGEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
+# plt.scatter(BAGEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
+# plt.legend()
+# plt.plot([0,100], [0,100], color = "gray")
+# plt.xlabel("Predicted EC (%IACS)")
+# plt.ylabel("Experimental EC (%IACS)")
+# plt.title("The performance of the final EC model using Bagging Regressor")
+# plt.show()
 
-print("Random Forest\n***UTS***")
-RFUTS = RandomForestRegressor(n_estimators = 100)
-RFUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
-print("Training Score")
-printscore(RFUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
-print("\nTesting Score")
-printscore(RFUTS, finUTSTest[:, UTStake], test_prop[:, 0])
-print("***EC***")
-RFEC = RandomForestRegressor(n_estimators = 100)
-RFEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
-print("Training Score")
-printscore(RFEC, finECTrain[:, ECtake], train_prop[:, 1])
-print("\nTesting Score")
-printscore(RFEC, finECTest[:, ECtake], test_prop[:, 1])
-print("*************\n")
+# print("Random Forest\n***UTS***")
+# RFUTS = RandomForestRegressor(n_estimators = 100)
+# RFUTS.fit(finUTSTrain[:, UTStake], train_prop[:, 0])
+# print("Training Score")
+# printscore(RFUTS, finUTSTrain[:, UTStake], train_prop[:, 0])
+# print("\nTesting Score")
+# printscore(RFUTS, finUTSTest[:, UTStake], test_prop[:, 0])
+# print("***EC***")
+# RFEC = RandomForestRegressor(n_estimators = 100)
+# RFEC.fit(finECTrain[:, ECtake], train_prop[:, 1])
+# print("Training Score")
+# printscore(RFEC, finECTrain[:, ECtake], train_prop[:, 1])
+# print("\nTesting Score")
+# printscore(RFEC, finECTest[:, ECtake], test_prop[:, 1])
+# print("*************\n")
 
-plt.scatter(RFUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
-plt.scatter(RFUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
-plt.legend()
-plt.plot([200,500], [200,500], color = "gray")
-plt.xlabel("Predicted UTS (MPa)")
-plt.ylabel("Experimental UTS (MPa)")
-plt.title("The performance of the final UTS model using Random Forest")
-plt.show()
+# plt.scatter(RFUTS.predict(finUTSTrain[:, UTStake]), train_prop[:, 0], c = "blue", label = "Training Set")
+# plt.scatter(RFUTS.predict(finUTSTest[:, UTStake]), test_prop[:, 0], c = "red", label = "Testing Set")
+# plt.legend()
+# plt.plot([200,500], [200,500], color = "gray")
+# plt.xlabel("Predicted UTS (MPa)")
+# plt.ylabel("Experimental UTS (MPa)")
+# plt.title("The performance of the final UTS model using Random Forest")
+# plt.show()
 
-plt.scatter(RFEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
-plt.scatter(RFEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
-plt.legend()
-plt.plot([0,100], [0,100], color = "gray")
-plt.xlabel("Predicted EC (%IACS)")
-plt.ylabel("Experimental EC (%IACS)")
-plt.title("The performance of the final EC model using Random Forest")
-plt.show()
+# plt.scatter(RFEC.predict(finECTrain[:, ECtake]), train_prop[:, 1], c = "blue", label = "Training Set")
+# plt.scatter(RFEC.predict(finECTest[:, ECtake]), test_prop[:, 1], c = "red", label = "Testing Set")
+# plt.legend()
+# plt.plot([0,100], [0,100], color = "gray")
+# plt.xlabel("Predicted EC (%IACS)")
+# plt.ylabel("Experimental EC (%IACS)")
+# plt.title("The performance of the final EC model using Random Forest")
+# plt.show()
