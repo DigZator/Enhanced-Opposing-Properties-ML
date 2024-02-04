@@ -93,19 +93,10 @@ plt.colorbar()
 # # plt.savefig('CorrelationMatrix-20230209-1904.png', dpi = 3000)
 plt.show()
 
+# df = pd.DataFrame(r)
+# df.to_excel("CorrelationMatrix-20240120.xlsx")
+
 # Performing Screening Correlation
-accountedfor = set()
-sel = list()
-
-for x in range(138):
-    if x in accountedfor:
-        continue
-    accountedfor.add(x)
-    for y in range(x,138):
-        if abs(r[x][y]) > 0.95:
-            accountedfor.add(y)
-    sel.append(x)
-
 # accountedfor = set()
 # sel = list()
 
@@ -113,13 +104,25 @@ for x in range(138):
 #     if x in accountedfor:
 #         continue
 #     accountedfor.add(x)
-#     select_x = True  # Added a flag to keep track of x selection
-#     for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+#     for y in range(x,138):
 #         if abs(r[x][y]) > 0.95:
 #             accountedfor.add(y)
-#             select_x = False  # Set the flag to False when the condition is met
-#     if select_x:
-#         sel.append(x)
+#     sel.append(x)
+
+accountedfor = set()
+sel = list()
+
+for x in range(138):
+    if x in accountedfor:
+        continue
+    accountedfor.add(x)
+    select_x = True  # Added a flag to keep track of x selection
+    for y in range(x+1, 138):  # Start from x+1 to avoid comparing to itself
+        if abs(r[x][y]) > 0.95:
+            accountedfor.add(y)
+            select_x = False  # Set the flag to False when the condition is met
+    if select_x:
+        sel.append(x)
 
 print(sel)
 print(len(sel))
@@ -170,14 +173,14 @@ for keynum in (sel):
 print(sel_lab)
 
 # Train Full model
-svrUTS = make_pipeline(StandardScaler(), SVR())
+svrUTS = make_pipeline(StandardScaler(), SVR(gamma = 0.0085, C = 13))
 svrUTS.fit(train_fmv, train_prop[:,0])
 test_op_UTS = svrUTS.predict(test_fmv)
 train_op_UTS = svrUTS.predict(train_fmv)
 # print(test_op_UTS)
 # print(test_prop[:,0])
 
-svrEC = make_pipeline(StandardScaler(), SVR())
+svrEC = make_pipeline(StandardScaler(), SVR(gamma = 0.0011, C = 700))
 svrEC.fit(train_fmv, train_prop[:,1])
 test_op_EC = svrEC.predict(test_fmv)
 train_op_EC = svrEC.predict(train_fmv)
